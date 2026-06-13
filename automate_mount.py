@@ -140,12 +140,71 @@ def update_mount_cfg_content(content, bms_path_bms):
         
     return "\n".join(new_lines) + "\n"
 
+def handle_stabilization(bms_content_path, action, dry_run=False):
+    """Renomeia ou restaura pastas conflitantes no diretório bms do Black Mesa para evitar crashes."""
+    particles_path = os.path.join(bms_content_path, "particles")
+    particles_backup = os.path.join(bms_content_path, "_particles_backup")
+    scripts_path = os.path.join(bms_content_path, "scripts")
+    scripts_backup = os.path.join(bms_content_path, "_scripts_backup")
+
+    if action == 'stabilize':
+        # Particles
+        if os.path.isdir(particles_path):
+            print(f"[i] Estabilização: Desativando pasta de partículas conflitantes...")
+            if not dry_run:
+                try:
+                    os.rename(particles_path, particles_backup)
+                    print(f"[+] Pasta 'particles' renomeada para '_particles_backup'")
+                except Exception as e:
+                    print(f"[-] Erro ao renomear pasta 'particles': {e}")
+        elif os.path.isdir(particles_backup):
+            print(f"[i] Estabilização: Pasta 'particles' já está desativada ('_particles_backup').")
+
+        # Scripts
+        if os.path.isdir(scripts_path):
+            print(f"[i] Estabilização: Desativando pasta de scripts conflitantes...")
+            if not dry_run:
+                try:
+                    os.rename(scripts_path, scripts_backup)
+                    print(f"[+] Pasta 'scripts' renomeada para '_scripts_backup'")
+                except Exception as e:
+                    print(f"[-] Erro ao renomear pasta 'scripts': {e}")
+        elif os.path.isdir(scripts_backup):
+            print(f"[i] Estabilização: Pasta 'scripts' já está desativada ('_scripts_backup').")
+
+    elif action == 'restore':
+        # Particles
+        if os.path.isdir(particles_backup):
+            print(f"[i] Restauração: Ativando pasta de partículas do Black Mesa...")
+            if not dry_run:
+                try:
+                    os.rename(particles_backup, particles_path)
+                    print(f"[+] Pasta '_particles_backup' restaurada para 'particles'")
+                except Exception as e:
+                    print(f"[-] Erro ao restaurar pasta 'particles': {e}")
+        elif os.path.isdir(particles_path):
+            print(f"[i] Restauração: Pasta 'particles' já está no estado original.")
+
+        # Scripts
+        if os.path.isdir(scripts_backup):
+            print(f"[i] Restauração: Ativando pasta de scripts do Black Mesa...")
+            if not dry_run:
+                try:
+                    os.rename(scripts_backup, scripts_path)
+                    print(f"[+] Pasta '_scripts_backup' restaurada para 'scripts'")
+                except Exception as e:
+                    print(f"[-] Erro ao restaurar pasta 'scripts': {e}")
+        elif os.path.isdir(scripts_path):
+            print(f"[i] Restauração: Pasta 'scripts' já está no estado original.")
+
 def main():
     parser = argparse.ArgumentParser(description="Automatiza a montagem de assets do Black Mesa no Garry's Mod.")
     parser.add_argument("--gmod-path", help="Caminho raiz do Garry's Mod (onde fica a pasta garrysmod)")
     parser.add_argument("--bms-path", help="Caminho raiz do Black Mesa (onde fica a pasta bms)")
     parser.add_argument("--non-interactive", action="store_true", help="Não faz perguntas interativas. Falha se caminhos não forem achados.")
     parser.add_argument("--dry-run", action="store_true", help="Apenas simula as mudanças sem modificar arquivos.")
+    parser.add_argument("--stabilize", action="store_true", help="Renomeia pastas conflitantes (particles e scripts) no Black Mesa para evitar crashes.")
+    parser.add_argument("--restore", action="store_true", help="Restaura as pastas conflitantes do Black Mesa para o estado original.")
     
     args = parser.parse_args()
     
@@ -198,6 +257,14 @@ def main():
     if not os.path.isdir(bms_content_path):
         print(f"[-] Erro: A pasta de assets '{bms_content_path}' não existe. Verifique se o Black Mesa está instalado corretamente.")
         sys.exit(1)
+
+    # Se a flag --restore for definida, faz a restauração das pastas e encerra ou prossegue
+    if args.restore:
+        print("\n--- Restauração de pastas conflitantes do Black Mesa ---")
+        handle_stabilization(bms_content_path, 'restore', args.dry_run)
+        print("\n[+] Restauração concluída!")
+        if args.dry_run:
+            sys.exit(0)
         
     if not os.path.exists(mount_cfg_path):
         if args.non_interactive or args.dry_run:
@@ -226,10 +293,7 @@ def main():
     
     print("\n--- Mudanças planejadas no mount.cfg ---")
     # Mostrar um diff básico das linhas modificadas/inseridas
-    old_lines = old_content.splitlines()
-    new_lines = new_content.splitlines()
-    
-    print("[+] Nova linha configurada:")
+    print("[+] Linha configurada:")
     print(f'    "bms"    "{bms_content_path}"')
     print("----------------------------------------")
     
@@ -258,7 +322,29 @@ def main():
         with open(mount_cfg_path, "w", encoding="utf-8") as f:
             f.write(new_content)
         print("[+] Arquivo mount.cfg atualizado com sucesso!")
+        
+        # Otimização de Estabilização
+        print("\n==========================================================")
+        print("  Estabilização e Prevenção de Crashes (Isolamento)")
+        print("==========================================================")
+        
+        do_stabilize = False
+        if not args.restore:
+            if args.stabilize:
+                do_stabilize = True
+            elif not args.non_interactive:
+                print("\n[?] Deseja desativar temporariamente as pastas de partículas e scripts conflitantes do Black Mesa?")
+                print("    (Altamente recomendado para evitar Crashes to Desktop (CTD) no GMod)")
+                confirm = input("Confirmar otimização? (s/n): ").strip().lower()
+                if confirm == 's':
+                    do_stabilize = True
+        
+        if do_stabilize:
+            handle_stabilization(bms_content_path, 'stabilize', args.dry_run)
+            
         print("\nPronto! Lembre-se de rodar o Garry's Mod na branch x86-64.")
+        print("Parâmetros de inicialização sugeridos para maior estabilidade:")
+        print("  -systemalloc -heapsize 4194304 -mat_queue_mode 2 -gmod_mcore")
     except Exception as e:
         print(f"[-] Erro ao gravar alterações no mount.cfg: {e}")
         sys.exit(1)
