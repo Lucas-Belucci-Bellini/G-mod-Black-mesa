@@ -1,6 +1,27 @@
 Como especialista na Source Engine, posso te ajudar com isso. Montar assets de jogos externos no Garry's Mod é um processo direto, mas requer precisão nos caminhos dos arquivos. O Black Mesa é um caso peculiar devido às pesadas modificações que a Crowbar Collective fez na engine original, então precisamos ter cuidado extra.
 
-Aqui está o seu guia passo a passo para montar o Black Mesa no Garry's Mod (branch x86-64).
+Para facilitar o processo, fornecemos um script de automação para realizar toda a configuração. Escolha o método que preferir:
+
+---
+
+## ⚡ Método Automático (Recomendado)
+
+O script automatiza a detecção de caminhos da Steam e altera as configurações de forma segura.
+
+### Como Executar:
+1. **Via Batch (Windows)**: Dê um duplo clique no arquivo [run.bat](file:///c:/G-mod-Black-mesa/run.bat).
+2. **Via Terminal**: Rode o comando abaixo no terminal da pasta do projeto:
+   ```bash
+   python automate_mount.py
+   ```
+3. O script confirmará os caminhos detectados e criará um backup de segurança do seu `mount.cfg` antes de modificá-lo.
+
+---
+
+## 🛠️ Método Manual: Guia Passo a Passo
+
+Se preferir fazer a montagem manualmente, siga os passos abaixo:
+
 
 Passo 1: Preparando o Garry's Mod (Branch x86-64)
 Antes de montar os arquivos, certifique-se de que o seu Garry's Mod está rodando na versão 64-bits, o que melhora significativamente o desempenho ao carregar muitos assets e mapas grandes.
